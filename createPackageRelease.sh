@@ -27,7 +27,7 @@ echo "ThermDriverPath: $thermDriverPath"
 echo "SensorDriverPath: $sensorDriverPath"
 echo "ReleaseNotes: $relNotes"
 
-hpm manifest-modify-driver --id 390cc6e1-acbb-4af3-be52-7a68e4bcc580 --version=$version --location $thermDriverPath ../hubitat-packages/packages/honeywellManifest.json
-hpm manifest-modify-driver --id ebe84e87-e064-4029-9e5b-ad0cb7939230 --version=$version --location $sensorDriverPath ../hubitat-packages/packages/honeywellManifest.json
-hpm manifest-modify-app --id fe2bb542-854f-47b4-8d20-cde1ead99f2d --version=$version --location $appPath ../hubitat-packages/packages/honeywellManifest.json
-hpm manifest-modify --releasenotes="$relNotes" --version=$version ../hubitat-packages/packages/honeywellManifest.json
+./hpm manifest-modify-driver --id 6973163c-9331-43f3-ac9a-12d0e17367c8 --version=$version --location $thermDriverPath honeywellManifest.json
+./hpm manifest-modify-driver --id 69cdfa49-2e58-4db5-8d4a-add69976bfa8 --version=$version --location $sensorDriverPath honeywellManifest.json
+./hpm manifest-modify-app --id b249b2d7-a5e2-4e6a-819c-9361c3f5c4cf --version=$version --location $appPath honeywellManifest.json
+./hpm manifest-modify --releasenotes="$relNotes" --version=$version honeywellManifest.json

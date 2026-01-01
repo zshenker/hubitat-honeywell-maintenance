@@ -1,0 +1,38 @@
+{
+  "packageName": "Honeywell Thermostat",
+  "author": "Zac Shenker",
+  "minimumHEVersion": "0.0",
+  "dateReleased": "2026-01-01",
+  "version": "1.0.0",
+  "releaseNotes": "Initial Release after CoPilot cleanup",
+  "drivers": [
+    {
+      "id": "6973163c-9331-43f3-ac9a-12d0e17367c8",
+      "name": "Honeywell Home Thermostat",
+      "namespace": "zshenker",
+      "location": "./honeywellhomedriver.groovy",
+      "required": false,
+      "version": "1.0.0"
+    },
+    {
+      "id": "69cdfa49-2e58-4db5-8d4a-add69976bfa8",
+      "name": "Honeywell Home Remote Sensor",
+      "namespace": "zshenker",
+      "location": "./honeywellremotesensordriver.groovy",
+      "required": false,
+      "version": "1.0.0"
+    }
+  ],
+  "apps": [
+    {
+      "id": "b249b2d7-a5e2-4e6a-819c-9361c3f5c4cf",
+      "name": "Honeywell Home",
+      "namespace": "zshenker",
+      "location": "./honeywellhomeapp.groovy",
+      "required": false,
+      "oauth": false,
+      "primary": false,
+      "version": "1.0.0"
+    }
+  ]
+}

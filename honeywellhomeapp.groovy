@@ -36,10 +36,10 @@ import groovy.transform.Field
 
 definition(
         name: "Honeywell Home",
-        namespace: "thecloudtaylor",
-        author: "Taylor Brown",
+        namespace: "zshenker",
+        author: "Zac Shenker",
         description: "App for Lyric (LCC) and T series (TCC) Honeywell Thermostats, requires corresponding driver.",
-        importUrl:"https://raw.githubusercontent.com/thecloudtaylor/hubitat-honeywell/main/honeywellhomeapp.groovy",
+        importUrl:"https://raw.githubusercontent.com/zshenker/hubitat-honeywell-maintenance/main/honeywellhomeapp.groovy",
         category: "Thermostat",
         iconUrl: "",
         iconX2Url: "")

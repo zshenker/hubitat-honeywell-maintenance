@@ -26,10 +26,10 @@ import groovy.transform.Field
 metadata {
 	definition (
 			name: "Honeywell Home Remote Sensor",
-			namespace: "thecloudtaylor",
+			namespace: "zshenker",
 			description:"Driver for Honeywell Home Remote Sensors, requires corresponding Honeywell Home App.",
-			importUrl:"https://raw.githubusercontent.com/thecloudtaylor/hubitat-honeywell/main/honeywellremotesensordriver.groovy",
-			author: "Tim Yuhl") {
+			importUrl:"https://raw.githubusercontent.com/zshenker/hubitat-honeywell-maintenance/main/honeywellremotesensordriver.groovy",
+			author: "Zac Shenker") {
 			capability 	"Temperature Measurement"
 			capability  "Relative Humidity Measurement"
 			capability 	"Sensor"

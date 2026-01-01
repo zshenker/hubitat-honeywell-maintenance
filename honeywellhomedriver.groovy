@@ -24,9 +24,9 @@ metadata {
     definition (
         name: "Honeywell Home Thermostat", 
         description:"Driver for Lyric (LCC) and T series (TCC) Honeywell Thermostats, Requires corresponding Honeywell Home App.",
-        importUrl:"https://raw.githubusercontent.com/thecloudtaylor/hubitat-honeywell/main/honeywellhomedriver.groovy",
-        namespace: "thecloudtaylor", 
-        author: "Taylor Brown") {
+        importUrl:"https://raw.githubusercontent.com/zshenker/hubitat-honeywell-maintenance/main/honeywellhomedriver.groovy",
+        namespace: "zshenker", 
+        author: "Zac Shenker") {
             capability "Actuator"
             capability "Temperature Measurement"
             capability "Relative Humidity Measurement"
