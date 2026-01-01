@@ -232,7 +232,7 @@ def connectToHoneywell() {
     }
     def auth_state = java.net.URLEncoder.encode("${getHubUID()}/apps/${app.id}/handleAuth?access_token=${state.accessToken}", "UTF-8")
     def escapedRedirectURL = java.net.URLEncoder.encode(global_redirectURL, "UTF-8")
-    def authQueryString = "response_type=code&redirect_uri=${escapedRedirectURL}&client_id=${settings.consumerKey}&state=${auth_state}"
+    def authQueryString = "response_type=code&redirect_uri=" + escapedRedirectURL + "&client_id=" + settings.consumerKey + "&state=" + auth_state
 
     def params = [
         uri: global_apiURL,
@@ -546,7 +546,7 @@ def handleAuthRedirect() {
     }
 
     LogDebug("AuthCode: ${authCode}")
-    def authorization = "Basic " + ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
+    def authorization = "Basic " + (settings.consumerKey + ":" + settings.consumerSecret).bytes.encodeBase64().toString()
 
     def headers = [
         Authorization: authorization,
@@ -605,7 +605,7 @@ void refreshToken() {
         return
     }
     
-    def authorization = "Basic " + ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
+    def authorization = "Basic " + (settings.consumerKey + ":" + settings.consumerSecret).bytes.encodeBase64().toString()
 
     def headers = [
         Authorization: authorization,
