@@ -369,8 +369,10 @@ def discoverDevices()
         locations.devices.each {dev ->
             LogDebug("DeviceID: ${dev.deviceID.toString()}")
             LogDebug("DeviceModel: ${dev.deviceModel.toString()}")
+            LogDebug("DeviceClass: ${dev.deviceClass}")
             def thermoNetId = "${locationID} - ${dev.deviceID.toString()}"
             if (dev.deviceClass == "Thermostat") {
+                LogInfo("Discovered Thermostat: ${dev.deviceModel} (${dev.userDefinedDeviceName})")
                 try {
                     def newDevice = addChildDevice(
                             'thecloudtaylor',
@@ -386,9 +388,9 @@ def discoverDevices()
                     return
                 }
                 catch (IllegalArgumentException ignored) {
-                    //Intentionally ignored.  Expected if device id already exists in HE.
+                    // Intentionally ignored. Expected if device id already exists in HE.
                 }
-                //Check this thermostat for remote sensors
+                // Check this thermostat for remote sensors (T9, T10+ PRO, etc.)
                 if (dev.groups != null) {
                     LogDebug("Checking Thermostat ${dev.deviceID.toString()} for remote sensors")
                     dev.groups.each { group ->
@@ -397,12 +399,12 @@ def discoverDevices()
                         group.rooms.each { room ->
                             LogDebug("Room No.: ${room.toString()}")
                             if (room == 0) {
-                                return  // ignore thermostat entry
+                                return  // Ignore thermostat entry (room 0 is the thermostat itself)
                             }
                             def roomName = getRemoteSensorUserDefName(dev.deviceID.toString(), locationID,
                                                     group.id.toString(), room)
-                            try
-                            {
+                            LogInfo("Discovered Remote Sensor: ${roomName} in ${dev.userDefinedDeviceName}")
+                            try {
                                 def newRemoteSensor = addChildDevice(
                                     'thecloudtaylor',
                                     'Honeywell Home Remote Sensor',
@@ -418,16 +420,16 @@ def discoverDevices()
                                 sendEvent(newRemoteSensor, [name: "parentDeviceNetId", value: thermoNetId])
                                 sendEvent(newRemoteSensor, [name: "locationId", value: locationID])
                             }
-                            catch (com.hubitat.app.exception.UnknownDeviceTypeException e)
-                            {
-                            LogInfo("${e.message} - you need to install the appropriate driver.")
+                            catch (com.hubitat.app.exception.UnknownDeviceTypeException e) {
+                                LogInfo("${e.message} - you need to install the appropriate driver.")
                             }
-                            catch (IllegalArgumentException ignored)
-                            {
-                            //Intentionally ignored.  Expected if device id already exists in HE.
+                            catch (IllegalArgumentException ignored) {
+                                // Intentionally ignored. Expected if device id already exists in HE.
                             }
                         }
                     }
+                } else {
+                    LogDebug("Thermostat ${dev.deviceModel} does not have remote sensors configured")
                 }
             }
         }
