@@ -30,7 +30,7 @@
       "namespace": "zshenker",
       "location": "https://raw.githubusercontent.com/zshenker/hubitat-honeywell-maintenance/main/honeywellhomeapp.groovy",
       "required": false,
-      "oauth": false,
+      "oauth": true,
       "primary": false,
       "version": "1.0.0"
     }
