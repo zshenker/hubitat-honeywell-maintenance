@@ -59,8 +59,7 @@ mappings {
 def mainPage() {
     dynamicPage(name: "mainPage", title: "Honeywell Home", install: true, uninstall: true) {
         installCheck()
-        if(state.appInstalled == 'COMPLETE')
-        {   
+        if (state.appInstalled == 'COMPLETE') {
             section {
                 paragraph "Establish connection to Honeywell Home and Discover devices"
             }
@@ -83,15 +82,15 @@ def mainPage() {
     }
 }
 
-def installCheck()
-{
+def installCheck() {
     state.appInstalled = app.getInstallationState() 
-    if(state.appInstalled != 'COMPLETE'){
-        section{paragraph "Please hit 'Done' to install '${app.label}' app "}
-      }
-      else{
+    if (state.appInstalled != 'COMPLETE') {
+        section { 
+            paragraph "Please hit 'Done' to install '${app.label}' app "
+        }
+    } else {
         LogInfo("Parent Installed OK")
-      }
+    }
 }
 
 
@@ -144,115 +143,93 @@ def debugPage() {
     }
 }
 
-def LogDebug(logMessage)
-{
-    if(settings?.debugOutput)
-    {
-        log.debug "${logMessage}";
+void LogDebug(String logMessage) {
+    if (settings?.debugOutput) {
+        log.debug "${logMessage}"
     }
 }
 
-def LogInfo(logMessage)
-{
-    log.info "${logMessage}";
+void LogInfo(String logMessage) {
+    log.info "${logMessage}"
 }
 
-def LogWarn(logMessage)
-{
-    log.warn "${logMessage}";
+void LogWarn(String logMessage) {
+    log.warn "${logMessage}"
 }
 
-def LogError(logMessage)
-{
-    log.error "${logMessage}";
+void LogError(String logMessage) {
+    log.error "${logMessage}"
 }
 
-def installed()
-{
-    LogInfo("Installing Honeywell Home.");
-    createAccessToken();
-    
+void installed() {
+    LogInfo("Installing Honeywell Home.")
+    createAccessToken()
 }
 
-def initialize() 
-{
-    LogInfo("Initializing Honeywell Home.");
+void initialize() {
+    LogInfo("Initializing Honeywell Home.")
     unschedule()
     refreshToken()
     RefreshAllDevices()
     
-    if (refreshIntervals != "0" && refreshIntervals != null)
-    {
-        def cronString = ('0 */' + refreshIntervals + ' * ? * *')
+    if (refreshIntervals != "0" && refreshIntervals != null) {
+        def cronString = '0 */' + refreshIntervals + ' * ? * *'
         LogDebug("Scheduling Refresh cronstring: ${cronString}")
         schedule(cronString, RefreshAllDevices)
-    }
-    else
-    {
+    } else {
         LogInfo("Auto Refresh Disabled.")
     }
 }
 
-def updated() 
-{
-    LogDebug("Updated with config: ${settings}");
-    if (refreshIntervals == null)
-    {
-        refreshIntervals = 10;
+void updated() {
+    LogDebug("Updated with config: ${settings}")
+    if (refreshIntervals == null) {
+        refreshIntervals = 10
     }
-    initialize();
+    initialize()
 }
 
-def uninstalled() 
-{
-    LogInfo("Uninstalling Honeywell Home.");
+void uninstalled() {
+    LogInfo("Uninstalling Honeywell Home.")
     unschedule()
-    for (device in getChildDevices())
-    {
+    for (device in getChildDevices()) {
         deleteChildDevice(device.deviceNetworkId)
     }
 }
 
-def connectToHoneywell() 
-{
-    LogDebug("connectToHoneywell()");
+def connectToHoneywell() {
+    LogDebug("connectToHoneywell()")
     LogDebug("Key: ${settings.consumerKey}")
 
-    //if this isn't defined early then the redirect fails for some reason...
-    def redirectLocation = "http://www.bing.com";
-    if (state.accessToken == null)
-    {
-        createAccessToken();
+    // If this isn't defined early then the redirect fails for some reason
+    def redirectLocation = "http://www.bing.com"
+    if (!state.accessToken) {
+        createAccessToken()
     }
     def auth_state = java.net.URLEncoder.encode("${getHubUID()}/apps/${app.id}/handleAuth?access_token=${state.accessToken}", "UTF-8")
     def escapedRedirectURL = java.net.URLEncoder.encode(global_redirectURL, "UTF-8")
-    def authQueryString = "response_type=code&redirect_uri=${escapedRedirectURL}&client_id=${settings.consumerKey}&state=${auth_state}";
+    def authQueryString = "response_type=code&redirect_uri=${escapedRedirectURL}&client_id=${settings.consumerKey}&state=${auth_state}"
 
     def params = [
         uri: global_apiURL,
         path: "/oauth2/authorize",
-        queryString: authQueryString.toString()
+        queryString: authQueryString
     ]
-    LogDebug("honeywell_auth request params: ${params}");
+    LogDebug("honeywell_auth request params: ${params}")
     try {
         httpPost(params) { response -> 
-            if (response.status == 302) 
-            {
+            if (response.status == 302) {
                 LogDebug("Response 302, getting redirect")
                 redirectLocation = response.headers.'Location'
-                LogDebug("Redirect: ${redirectLocation}");
-            }
-            else
-            {
+                LogDebug("Redirect: ${redirectLocation}")
+            } else {
                 LogError("Auth request Returned Invalid HTTP Response: ${response.status}")
-                return false;
+                return false
             } 
         }
-    }
-    catch (groovyx.net.http.HttpResponseException e)
-    {
+    } catch (groovyx.net.http.HttpResponseException e) {
         LogError("API Auth failed -- ${e.getLocalizedMessage()}: ${e.response.data}")
-        return false;
+        return false
     }
 
     dynamicPage(name: "mainPage", title: "Honeywell Home", install: true, uninstall: true) {
@@ -269,26 +246,20 @@ def connectToHoneywell()
     }
 }
 
-def getDiscoverButton() 
-{
-    if (state.access_token == null) 
-    {
-        section 
-        {
+def getDiscoverButton() {
+    if (!state.access_token) {
+        section {
             paragraph "Device discovery and configuration is hidden until authorization is completed."            
         }
-    } 
-    else 
-    {
-        section 
-        {
+    } else {
+        section {
             input 'discoverDevices', 'button', title: 'Discover', submitOnChange: true
         }
     }
 }
 
 def getDebugLink() {
-    section{
+    section {
         href(
             name       : 'debugHref',
             title      : 'Debug buttons',
@@ -537,61 +508,49 @@ def handleAuthRedirect()
     render contentType: "text/html", data: html, status: 200
 }
 
-def refreshToken()
-{
-    LogDebug("refreshToken()");
+void refreshToken() {
+    LogDebug("refreshToken()")
 
-    if (state.refresh_token != null)
-    {
+    if (state.refresh_token) {
         def authorization = ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
 
         def headers = [
-                        Authorization: authorization,
-                        Accept: "application/json"
-                    ]
+            Authorization: authorization,
+            Accept: "application/json"
+        ]
         def body = [
-                        grant_type:"refresh_token",
-                        refresh_token:state.refresh_token
-
+            grant_type:"refresh_token",
+            refresh_token:state.refresh_token
         ]
         def params = [uri: global_apiURL, path: "/oauth2/token", headers: headers, body: body]
         
-        try 
-        {
+        try {
             httpPost(params) { response -> loginResponse(response) }
-        } 
-        catch (groovyx.net.http.HttpResponseException e) 
-        {
+        } catch (groovyx.net.http.HttpResponseException e) {
             LogError("Login failed -- ${e.getLocalizedMessage()}: ${e.response.data}")  
         }
-    }
-    else
-    {
+    } else {
         LogError("Failed to refresh token, refresh token null.")
     }
 }
 
-def loginResponse(response) 
-{
-    LogDebug("loginResponse()");
+void loginResponse(response) {
+    LogDebug("loginResponse()")
 
-    def reCode = response.getStatus();
-    def reJson = response.getData();
-    LogDebug("reCode: {$reCode}")
-    LogDebug("reJson: {$reJson}")
+    def reCode = response.getStatus()
+    def reJson = response.getData()
+    LogDebug("reCode: ${reCode}")
+    LogDebug("reJson: ${reJson}")
 
-    if (reCode == 200)
-    {
-        state.access_token = reJson.access_token;
-        state.refresh_token = reJson.refresh_token;
+    if (reCode == 200) {
+        state.access_token = reJson.access_token
+        state.refresh_token = reJson.refresh_token
         
         def expireTime = (Integer.parseInt(reJson.expires_in) - 100)
         LogInfo("Honeywell API Token Refreshed Successfully, Next Scheduled in: ${expireTime} sec")
         runIn(expireTime, refreshToken)
-    }
-    else
-    {
-        LogError("LoginResponse Failed HTTP Request Status: ${reCode}");
+    } else {
+        LogError("LoginResponse Failed HTTP Request Status: ${reCode}")
     }
 }
 
