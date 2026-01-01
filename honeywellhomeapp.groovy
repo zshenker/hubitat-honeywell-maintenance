@@ -60,6 +60,15 @@ def mainPage() {
     dynamicPage(name: "mainPage", title: "Honeywell Home", install: true, uninstall: true) {
         installCheck()
         if (state.appInstalled == 'COMPLETE') {
+            // Show OAuth connection status
+            section("Connection Status") {
+                if (state.access_token) {
+                    paragraph "✓ Connected to Honeywell Home"
+                } else {
+                    paragraph "⚠ Not connected - Please establish OAuth connection"
+                }
+            }
+            
             section {
                 paragraph "Establish connection to Honeywell Home and Discover devices"
             }
@@ -169,8 +178,18 @@ void installed() {
 void initialize() {
     LogInfo("Initializing Honeywell Home.")
     unschedule()
-    refreshToken()
-    RefreshAllDevices()
+    
+    // Only refresh token if we have one; otherwise user needs to authenticate first
+    if (state.refresh_token) {
+        refreshToken()
+    } else {
+        LogWarn("No refresh token found. Please establish OAuth connection with Honeywell.")
+    }
+    
+    // Only refresh devices if we have an access token
+    if (state.access_token) {
+        RefreshAllDevices()
+    }
     
     if (refreshIntervals != "0" && refreshIntervals != null) {
         def cronString = '0 */' + refreshIntervals + ' * ? * *'
@@ -336,9 +355,14 @@ def deleteDevices()
     } 
 }
 
-def discoverDevices()
-{
-    LogDebug("discoverDevices()");
+def discoverDevices() {
+    LogDebug("discoverDevices()")
+    
+    // Validate we have an access token before attempting discovery
+    if (!state.access_token) {
+        LogError("Cannot discover devices - no access token. Please establish OAuth connection first.")
+        return
+    }
 
     def uri = global_apiURL + '/v2/locations' + "?apikey=" + settings.consumerKey
     def headers = [ Authorization: 'Bearer ' + state.access_token ]
@@ -471,68 +495,121 @@ def discoverDevicesCallback(resp, data)
     }
 }
 
-def handleAuthRedirect() 
-{
-    LogDebug("handleAuthRedirect()");
+def handleAuthRedirect() {
+    LogDebug("handleAuthRedirect()")
 
     def authCode = params.code
+    def authError = params.error
+    def errorDescription = params.error_description
+    
+    // Check for OAuth errors from Honeywell
+    if (authError) {
+        LogError("OAuth Authorization Error: ${authError} - ${errorDescription}")
+        def stringBuilder = new StringBuilder()
+        stringBuilder << "<!DOCTYPE html><html><head><title>Honeywell Authorization Failed</title></head>"
+        stringBuilder << "<body><h2>Authorization Failed</h2>"
+        stringBuilder << "<p>Error: ${authError}</p>"
+        if (errorDescription) {
+            stringBuilder << "<p>Details: ${errorDescription}</p>"
+        }
+        stringBuilder << "<p><a href=http://${location.hub.localIP}/installedapp/configure/${app.id}/mainPage>Click here</a> to return and try again.</p></body></html>"
+        render contentType: "text/html", data: stringBuilder.toString(), status: 200
+        return
+    }
+    
+    if (!authCode) {
+        LogError("No authorization code received")
+        def stringBuilder = new StringBuilder()
+        stringBuilder << "<!DOCTYPE html><html><head><title>Honeywell Authorization Failed</title></head>"
+        stringBuilder << "<body><h2>Authorization Failed</h2>"
+        stringBuilder << "<p>No authorization code received from Honeywell.</p>"
+        stringBuilder << "<p><a href=http://${location.hub.localIP}/installedapp/configure/${app.id}/mainPage>Click here</a> to return and try again.</p></body></html>"
+        render contentType: "text/html", data: stringBuilder.toString(), status: 200
+        return
+    }
 
     LogDebug("AuthCode: ${authCode}")
-    def authorization = ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
+    def authorization = "Basic " + ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
 
     def headers = [
-                    Authorization: authorization,
-                    Accept: "application/json"
-                ]
+        Authorization: authorization,
+        Accept: "application/json"
+    ]
     def body = [
-                    grant_type:"authorization_code",
-                    code:authCode,
-                    redirect_uri:global_redirectURL
+        grant_type:"authorization_code",
+        code:authCode,
+        redirect_uri:global_redirectURL
     ]
     def params = [uri: global_apiURL, path: "/oauth2/token", headers: headers, body: body]
     
-    try 
-    {
-        httpPost(params) { response -> loginResponse(response) }
-    } 
-    catch (groovyx.net.http.HttpResponseException e) 
-    {
-        LogError("Login failed -- ${e.getLocalizedMessage()}: ${e.response.data}")
+    def success = false
+    try {
+        httpPost(params) { response -> 
+            loginResponse(response)
+            success = (response.getStatus() == 200)
+        }
+    } catch (groovyx.net.http.HttpResponseException e) {
+        LogError("Token exchange failed -- ${e.getLocalizedMessage()}: ${e.response.data}")
+        success = false
     }
 
     def stringBuilder = new StringBuilder()
-    stringBuilder << "<!DOCTYPE html><html><head><title>Honeywell Connected to Hubitat</title></head>"
-    stringBuilder << "<body><p>Hubitat and Honeywell are now connected.</p>"
+    stringBuilder << "<!DOCTYPE html><html><head><title>Honeywell ${success ? 'Connected' : 'Connection Failed'}</title></head>"
+    stringBuilder << "<body>"
+    
+    if (success) {
+        stringBuilder << "<h2>Successfully Connected!</h2>"
+        stringBuilder << "<p>Hubitat and Honeywell are now connected.</p>"
+        stringBuilder << "<p>You can now discover your devices.</p>"
+    } else {
+        stringBuilder << "<h2>Connection Failed</h2>"
+        stringBuilder << "<p>Failed to exchange authorization code for access token.</p>"
+        stringBuilder << "<p>Please check the logs and try again.</p>"
+    }
+    
     stringBuilder << "<p><a href=http://${location.hub.localIP}/installedapp/configure/${app.id}/mainPage>Click here</a> to return to the App main page.</p></body></html>"
     
     def html = stringBuilder.toString()
-
     render contentType: "text/html", data: html, status: 200
 }
 
 void refreshToken() {
     LogDebug("refreshToken()")
 
-    if (state.refresh_token) {
-        def authorization = ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
+    if (!state.refresh_token) {
+        LogError("Cannot refresh token - refresh_token is null. User needs to re-authenticate.")
+        LogWarn("Please go to the app configuration and re-establish the OAuth connection with Honeywell.")
+        return
+    }
+    
+    def authorization = "Basic " + ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
 
-        def headers = [
-            Authorization: authorization,
-            Accept: "application/json"
-        ]
-        def body = [
-            grant_type:"refresh_token",
-            refresh_token:state.refresh_token
-        ]
-        def params = [uri: global_apiURL, path: "/oauth2/token", headers: headers, body: body]
+    def headers = [
+        Authorization: authorization,
+        Accept: "application/json"
+    ]
+    def body = [
+        grant_type:"refresh_token",
+        refresh_token:state.refresh_token
+    ]
+    def params = [uri: global_apiURL, path: "/oauth2/token", headers: headers, body: body]
+    
+    try {
+        httpPost(params) { response -> loginResponse(response) }
+    } catch (groovyx.net.http.HttpResponseException e) {
+        LogError("Token refresh failed -- ${e.getLocalizedMessage()}: ${e.response.data}")
         
-        try {
-            httpPost(params) { response -> loginResponse(response) }
-        } catch (groovyx.net.http.HttpResponseException e) {
-            LogError("Login failed -- ${e.getLocalizedMessage()}: ${e.response.data}")  
+        // If refresh token is invalid/expired, clear tokens and notify user
+        if (e.getStatusCode() == 401 || e.getStatusCode() == 400) {
+            LogError("Refresh token is invalid or expired. User must re-authenticate.")
+            LogWarn("Please go to the app configuration and re-establish the OAuth connection with Honeywell.")
+            state.access_token = null
+            state.refresh_token = null
+        } else {
+            // For other errors, schedule a retry in 5 minutes
+            LogWarn("Will retry token refresh in 5 minutes")
+            runIn(300, refreshToken)
         }
-    } else {
-        LogError("Failed to refresh token, refresh token null.")
     }
 }
 
@@ -545,10 +622,17 @@ void loginResponse(response) {
     LogDebug("reJson: ${reJson}")
 
     if (reCode == 200) {
+        // Validate token response has required fields
+        if (!reJson.access_token || !reJson.refresh_token || !reJson.expires_in) {
+            LogError("Token response missing required fields")
+            return
+        }
+        
         state.access_token = reJson.access_token
         state.refresh_token = reJson.refresh_token
         
-        def expireTime = (Integer.parseInt(reJson.expires_in) - 100)
+        // Use 5-minute buffer (300 seconds) before token expiration to ensure refresh happens in time
+        def expireTime = Math.max(Integer.parseInt(reJson.expires_in) - 300, 60)
         LogInfo("Honeywell API Token Refreshed Successfully, Next Scheduled in: ${expireTime} sec")
         runIn(expireTime, refreshToken)
     } else {
