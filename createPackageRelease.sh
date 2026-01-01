@@ -1,6 +1,6 @@
 #!/bin/bash
 
-usage="Usage: $(basename "$0") [-v | --version]<version in simver formate> [-c|--codePath]<root path to code> [-r|--releasenotes]<releasenotes>)"
+usage="Usage: $(basename "$0") [-v | --version]<version in semver format> [-c|--codePath]<root path to code> [-r|--releasenotes]<releasenotes>)"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -13,7 +13,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [[ -z "${version}" ]] || [[ -z "${codePath}" ]] || [[ -z "${relNotes}" ]]; then
-  echo "Not all requied parmiters passed!"; echo $usage; exit 1 ;
+  echo "Not all required parameters passed!"; echo $usage; exit 1 ;
 fi
 
 appPath="$codePath/honeywellhomeapp.groovy"

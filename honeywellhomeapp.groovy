@@ -1,5 +1,5 @@
 /*
-Hubitat Driver For Honeywell Thermistate
+Hubitat Driver For Honeywell Thermostat
 
 Copyright 2020 - Taylor Brown
 
@@ -33,9 +33,9 @@ definition(
         name: "Honeywell Home",
         namespace: "thecloudtaylor",
         author: "Taylor Brown",
-        description: "App for Lyric (LCC) and T series (TCC) Honeywell Thermostats, requires corisponding driver.",
+        description: "App for Lyric (LCC) and T series (TCC) Honeywell Thermostats, requires corresponding driver.",
         importUrl:"https://raw.githubusercontent.com/thecloudtaylor/hubitat-honeywell/main/honeywellhomeapp.groovy",
-        category: "Thermostate",
+        category: "Thermostat",
         iconUrl: "",
         iconX2Url: "")
 
@@ -258,7 +258,7 @@ def connectToHoneywell()
     dynamicPage(name: "mainPage", title: "Honeywell Home", install: true, uninstall: true) {
         section
         {
-            paragraph "Click below to be redirected to Honeywall to authorize Hubitat access."
+            paragraph "Click below to be redirected to Honeywell to authorize Hubitat access."
             href(
                 name       : 'authHref',
                 title      : 'Establish OAuth Link with Honeywell',
@@ -529,7 +529,7 @@ def handleAuthRedirect()
 
     def stringBuilder = new StringBuilder()
     stringBuilder << "<!DOCTYPE html><html><head><title>Honeywell Connected to Hubitat</title></head>"
-    stringBuilder << "<body><p>Hubitate and Honeywell are now connected.</p>"
+    stringBuilder << "<body><p>Hubitat and Honeywell are now connected.</p>"
     stringBuilder << "<p><a href=http://${location.hub.localIP}/installedapp/configure/${app.id}/mainPage>Click here</a> to return to the App main page.</p></body></html>"
     
     def html = stringBuilder.toString()
@@ -586,7 +586,7 @@ def loginResponse(response)
         state.refresh_token = reJson.refresh_token;
         
         def expireTime = (Integer.parseInt(reJson.expires_in) - 100)
-        LogInfo("Honeywell API Token Refreshed Succesfully, Next Scheduled in: ${expireTime} sec")
+        LogInfo("Honeywell API Token Refreshed Successfully, Next Scheduled in: ${expireTime} sec")
         runIn(expireTime, refreshToken)
     }
     else
@@ -619,14 +619,14 @@ def refreshHelper(jsonString, cloudString, deviceString, com.hubitat.app.DeviceW
 {
     try
     {
-        LogDebug("refreshHelper() cloudString:${cloudString} - deviceString:${deviceString} - device:${device} - optionalUnits:${optionalUnits} - optionalMakeLowerMap:${optionalMakeLower} -optionalMakeLowerString:${optionalMakeLower}")
+        LogDebug("refreshHelper() cloudString:${cloudString} - deviceString:${deviceString} - device:${device} - optionalUnits:${optionalUnits} - optionalMakeLowerMap:${optionalMakeLowerMap} - optionalMakeLowerString:${optionalMakeLowerString}")
         
         def value = jsonString.get(cloudString)
         LogDebug("updateThermostats-${cloudString}: ${value}")
 
         if (value == null)
         {
-            LogDebug("Thermostate Does not Support: ${deviceString} (${cloudString})")
+            LogDebug("Thermostat Does not Support: ${deviceString} (${cloudString})")
             return false;
         }
         if (optionalMakeLowerMap)
@@ -657,7 +657,7 @@ def refreshHelper(jsonString, cloudString, deviceString, com.hubitat.app.DeviceW
     }
     catch (java.lang.NullPointerException e)
     {
-        LogDebug("Thermostate Does not Support: ${deviceString} (${cloudString})")
+        LogDebug("Thermostat Does not Support: ${deviceString} (${cloudString})")
         return false;
     }
 
@@ -669,13 +669,13 @@ def refreshThermosat(com.hubitat.app.DeviceWrapper device, retry=false)
     LogDebug("refreshThermosat()")
 
     def deviceID = device.getDeviceNetworkId();
-    def locDelminator = deviceID.indexOf('-');
-    def honeywellLocation = deviceID.substring(0, (locDelminator-1))
-    def honewellDeviceID = deviceID.substring((locDelminator+2))
+    def locDeliminator = deviceID.indexOf('-');
+    def honeywellLocation = deviceID.substring(0, (locDeliminator-1))
+    def honeywellDeviceID = deviceID.substring((locDeliminator+2))
 
-    LogDebug("Attempting to Update DeviceID: ${honewellDeviceID}, With LocationID: ${honeywellLocation}");
+    LogDebug("Attempting to Update DeviceID: ${honeywellDeviceID}, With LocationID: ${honeywellLocation}");
 
-    def uri = global_apiURL + '/v2/devices/thermostats/'+ honewellDeviceID + '?apikey=' + settings.consumerKey + '&locationId=' + honeywellLocation
+    def uri = global_apiURL + '/v2/devices/thermostats/'+ honeywellDeviceID + '?apikey=' + settings.consumerKey + '&locationId=' + honeywellLocation
     def headers = [ Authorization: 'Bearer ' + state.access_token ]
     def contentType = 'application/json'
     def params = [ uri: uri, headers: headers, contentType: contentType ]
@@ -826,7 +826,7 @@ String getRemoteSensorUserDefName(String parentDeviceId, String locationId, Stri
         {
             LogWarn('Authorization token expired, will refresh and retry.')
             refreshToken()
-            getRemoteSensorUserDefName(parentDeviceId, locationId, groupId, roomID, true)
+            getRemoteSensorUserDefName(parentDeviceId, locationId, groupId, roomId, true)
         }
 
         LogError("Remote Sensor API failed -- ${e.getLocalizedMessage()}: ${e.response.data}")
@@ -941,7 +941,8 @@ def refreshRemoteSensor(com.hubitat.app.DeviceWrapper device, retry=false)
         return
     }
     LogDebug( "roomJson: ${roomJson}")
-    //TO DO: Fix accessory indexing workaround (if possible)
+    // TODO: Currently using accessories[0] which assumes only one sensor per room. 
+    // May need to handle multiple accessories per room in future if API supports it.
     refreshSensorTemperature(roomJson.accessories[0], "temperature", "temperature", device, tempUnits)
     refreshHelper(roomJson, "roomAvgHumidity", "humidity", device, null, false, false)
     refreshHelper(roomJson.accessories[0], "status", "batterystatus", device, null, false, false)
@@ -953,16 +954,16 @@ def setThermosatSetPoint(com.hubitat.app.DeviceWrapper device, mode=null, autoCh
 {
     LogDebug("setThermosatSetPoint()")
     def deviceID = device.getDeviceNetworkId();
-    def locDelminator = deviceID.indexOf('-');
-    def honeywellLocation = deviceID.substring(0, (locDelminator-1))
-    def honewellDeviceID = deviceID.substring((locDelminator+2))
+    def locDeliminator = deviceID.indexOf('-');
+    def honeywellLocation = deviceID.substring(0, (locDeliminator-1))
+    def honeywellDeviceID = deviceID.substring((locDeliminator+2))
 
     //Refresh thermostat to make sure all settings are up-to-date - could have changed at the thermostat itself
     refreshThermosat(device)
 
     if (mode == null)
     {
-        //Bug fix: bypass cache, read directoy from DB
+        //Bug fix: bypass cache, read directly from DB
         mode=device.currentValue('thermostatMode', true);
     }
 
@@ -999,8 +1000,8 @@ def setThermosatSetPoint(com.hubitat.app.DeviceWrapper device, mode=null, autoCh
         coolPoint=device.currentValue('coolingSetpoint');
     }
 
-    LogDebug("Attempting to Set DeviceID: ${honewellDeviceID}, With LocationID: ${honeywellLocation}");
-    def uri = global_apiURL + '/v2/devices/thermostats/'+ honewellDeviceID + '?apikey=' + settings.consumerKey + '&locationId=' + honeywellLocation
+    LogDebug("Attempting to Set DeviceID: ${honeywellDeviceID}, With LocationID: ${honeywellLocation}");
+    def uri = global_apiURL + '/v2/devices/thermostats/'+ honeywellDeviceID + '?apikey=' + settings.consumerKey + '&locationId=' + honeywellLocation
 
     def headers = [
                     Authorization: 'Bearer ' + state.access_token,
@@ -1010,8 +1011,8 @@ def setThermosatSetPoint(com.hubitat.app.DeviceWrapper device, mode=null, autoCh
 
 
     // For LCC devices thermostatSetpointStatus = "NoHold" will return to schedule. "TemporaryHold" will hold the set temperature until "nextPeriodTime". "PermanentHold" will hold the setpoint until user requests another change.
-    // BugBug: Need to include nextPeriodTime if TemporaryHoldIs true
-    if (honewellDeviceID.startsWith("LCC"))
+    // TODO: Need to include nextPeriodTime if TemporaryHold is true
+    if (honeywellDeviceID.startsWith("LCC"))
     {
         //Get the user setting for the hold status
         def holdValue = "PermanentHold"
@@ -1056,7 +1057,7 @@ def setThermosatSetPoint(com.hubitat.app.DeviceWrapper device, mode=null, autoCh
 
     try
     {
-        httpPostJson(params) { response -> LogInfo("SetThermostate() Mode: ${mode}; Heatsetpoint: ${heatPoint}; CoolPoint: ${coolPoint} API Response: ${response.getStatus()}")}
+        httpPostJson(params) { response -> LogInfo("SetThermostat() Mode: ${mode}; Heatsetpoint: ${heatPoint}; CoolPoint: ${coolPoint} API Response: ${response.getStatus()}")}
     }
     catch (groovyx.net.http.HttpResponseException e) 
     {
@@ -1078,16 +1079,16 @@ def setThermosatFan(com.hubitat.app.DeviceWrapper device, fan=null, retry=false)
 {
     LogDebug("setThermosatFan()"  )
     def deviceID = device.getDeviceNetworkId();
-    def locDelminator = deviceID.indexOf('-');
-    def honeywellLocation = deviceID.substring(0, (locDelminator-1))
-    def honewellDeviceID = deviceID.substring((locDelminator+2))
+    def locDeliminator = deviceID.indexOf('-');
+    def honeywellLocation = deviceID.substring(0, (locDeliminator-1))
+    def honeywellDeviceID = deviceID.substring((locDeliminator+2))
 
     //Refresh thermostat to make sure all settings are up-to-date - could have changed at the thermostat itself
     refreshThermosat(device)
 
     if (fan == null)
     {
-        fan=device.('thermostatFanMode');
+        fan=device.currentValue('thermostatFanMode');
     }
 
     if (fan.toLowerCase() == "auto")
@@ -1109,8 +1110,8 @@ def setThermosatFan(com.hubitat.app.DeviceWrapper device, fan=null, retry=false)
     }
 
 
-    LogDebug("Attempting to Set Fan For DeviceID: ${honewellDeviceID}, With LocationID: ${honeywellLocation}");
-    def uri = global_apiURL + '/v2/devices/thermostats/'+ honewellDeviceID + '/fan' + '?apikey=' + settings.consumerKey + '&locationId=' + honeywellLocation
+    LogDebug("Attempting to Set Fan For DeviceID: ${honeywellDeviceID}, With LocationID: ${honeywellLocation}");
+    def uri = global_apiURL + '/v2/devices/thermostats/'+ honeywellDeviceID + '/fan' + '?apikey=' + settings.consumerKey + '&locationId=' + honeywellLocation
 
     def headers = [
                     Authorization: 'Bearer ' + state.access_token,
@@ -1143,7 +1144,7 @@ def setThermosatFan(com.hubitat.app.DeviceWrapper device, fan=null, retry=false)
 }
 
 ///
-//  Hack Celcius support in remote sensors since Honeywell API always returns Fahrenheit values
+//  Hack Celsius support in remote sensors since Honeywell API always returns Fahrenheit values
 //
 def refreshSensorTemperature(jsonString, cloudString, deviceString, com.hubitat.app.DeviceWrapper device, optionalUnits)
 {
@@ -1165,7 +1166,7 @@ def refreshSensorTemperature(jsonString, cloudString, deviceString, com.hubitat.
         if (optionalUnits == "°C")
         {
             // Convert the Fahrenheit value received from the API to Celsius
-            value = ToCelcius(value)
+            value = ToCelsius(value)
             LogDebug("refreshSensorTemperature-${cloudString}: Converted Value (C): ${value}")
             // *** FIX: Send the converted value WITH the Celsius unit ***
             sendEvent(device, [name: deviceString, value: value, unit: optionalUnits]) // Use optionalUnits which is "°C"
@@ -1191,8 +1192,8 @@ def refreshSensorTemperature(jsonString, cloudString, deviceString, com.hubitat.
     return true;
 }
 
-// Ensure the ToCelcius function handles non-numeric input gracefully if needed, though value should be numeric here.
-def ToCelcius(fTemp) {
+// Ensure the ToCelsius function handles non-numeric input gracefully if needed, though value should be numeric here.
+def ToCelsius(fTemp) {
     try {
         // Ensure fTemp is treated as a number
         def fNumeric = fTemp as BigDecimal

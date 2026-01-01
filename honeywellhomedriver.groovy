@@ -1,6 +1,6 @@
 /* groovylint-disable CatchException */
 /*
-Hubitat Driver For Honeywell Thermistate
+Hubitat Driver For Honeywell Thermostat
 
 Copyright 2020 - Taylor Brown
 
@@ -23,7 +23,7 @@ import groovy.json.JsonOutput
 metadata {
     definition (
         name: "Honeywell Home Thermostat", 
-        description:"Driver for Lyric (LCC) and T series (TCC) Honeywell Thermostats, Requires corisponding Honeywell Home App.",
+        description:"Driver for Lyric (LCC) and T series (TCC) Honeywell Thermostats, Requires corresponding Honeywell Home App.",
         importUrl:"https://raw.githubusercontent.com/thecloudtaylor/hubitat-honeywell/main/honeywellhomedriver.groovy",
         namespace: "thecloudtaylor", 
         author: "Taylor Brown") {
@@ -46,10 +46,10 @@ metadata {
     }
     preferences{
         input ("heatModeEnabled", "bool", 
-                title: "Allow Heat Mode, if false heat mode will be iqnored",
+                title: "Allow Heat Mode, if false heat mode will be ignored",
                 defaultValue:true)
         input ("coolModeEnabled", "bool", 
-                title: "Allow Cool Mode, if false cool mode will be iqnored",
+                title: "Allow Cool Mode, if false cool mode will be ignored",
                 defaultValue:true)
         input ("debugLogs", "bool", 
                title: "Enable debug logging", 
@@ -242,13 +242,13 @@ void setThermostatMode(thermostatmode)
 
     if (thermostatmode == "heat" && !heatModeEnabled)
     {
-        LogInfo("Heating Mode Requested but Not Allowed, Iqnoring")
+        LogInfo("Heating Mode Requested but Not Allowed, Ignoring")
         return
     }
 
     if (thermostatmode == "cool" && !coolModeEnabled)
     {
-        LogInfo("Cooling Mode Requested but Not Allowed, Iqnoring")
+        LogInfo("Cooling Mode Requested but Not Allowed, Ignoring")
         return
     }
 
