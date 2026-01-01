@@ -29,6 +29,11 @@ import groovy.transform.Field
 @Field static String global_apiURL = "https://api.honeywell.com"
 @Field static String global_redirectURL = "https://cloud.hubitat.com/oauth/stateredirect"
 
+// OAuth token management constants
+@Field static Integer TOKEN_REFRESH_BUFFER_SECONDS = 5 * 60  // 5 minutes before expiration
+@Field static Integer TOKEN_REFRESH_RETRY_DELAY_SECONDS = 5 * 60  // 5 minutes retry delay
+@Field static Integer TOKEN_REFRESH_MIN_SECONDS = 60  // Minimum time before refresh
+
 definition(
         name: "Honeywell Home",
         namespace: "thecloudtaylor",
@@ -527,6 +532,18 @@ def handleAuthRedirect() {
         render contentType: "text/html", data: stringBuilder.toString(), status: 200
         return
     }
+    
+    // Validate consumer credentials are configured
+    if (!settings.consumerKey || !settings.consumerSecret) {
+        LogError("Consumer Key or Secret not configured")
+        def stringBuilder = new StringBuilder()
+        stringBuilder << "<!DOCTYPE html><html><head><title>Configuration Error</title></head>"
+        stringBuilder << "<body><h2>Configuration Error</h2>"
+        stringBuilder << "<p>Consumer Key and Secret must be configured in Login Options.</p>"
+        stringBuilder << "<p><a href=http://${location.hub.localIP}/installedapp/configure/${app.id}/mainPage>Click here</a> to return and configure.</p></body></html>"
+        render contentType: "text/html", data: stringBuilder.toString(), status: 200
+        return
+    }
 
     LogDebug("AuthCode: ${authCode}")
     def authorization = "Basic " + ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
@@ -582,6 +599,12 @@ void refreshToken() {
         return
     }
     
+    // Validate consumer credentials are configured
+    if (!settings.consumerKey || !settings.consumerSecret) {
+        LogError("Consumer Key or Secret not configured - cannot refresh token")
+        return
+    }
+    
     def authorization = "Basic " + ("${settings.consumerKey}:${settings.consumerSecret}").bytes.encodeBase64().toString()
 
     def headers = [
@@ -606,9 +629,9 @@ void refreshToken() {
             state.access_token = null
             state.refresh_token = null
         } else {
-            // For other errors, schedule a retry in 5 minutes
-            LogWarn("Will retry token refresh in 5 minutes")
-            runIn(300, refreshToken)
+            // For other errors, schedule a retry
+            LogWarn("Will retry token refresh in ${TOKEN_REFRESH_RETRY_DELAY_SECONDS / 60} minutes")
+            runIn(TOKEN_REFRESH_RETRY_DELAY_SECONDS, refreshToken)
         }
     }
 }
@@ -631,9 +654,9 @@ void loginResponse(response) {
         state.access_token = reJson.access_token
         state.refresh_token = reJson.refresh_token
         
-        // Use 5-minute buffer (300 seconds) before token expiration to ensure refresh happens in time
-        def expireTime = Math.max(Integer.parseInt(reJson.expires_in) - 300, 60)
-        LogInfo("Honeywell API Token Refreshed Successfully, Next Scheduled in: ${expireTime} sec")
+        // Use configured buffer before token expiration to ensure refresh happens in time
+        def expireTime = Math.max(Integer.parseInt(reJson.expires_in) - TOKEN_REFRESH_BUFFER_SECONDS, TOKEN_REFRESH_MIN_SECONDS)
+        LogInfo("Honeywell API Token Refreshed Successfully, Next Scheduled in: ${expireTime} sec (${expireTime / 60} minutes)")
         runIn(expireTime, refreshToken)
     } else {
         LogError("LoginResponse Failed HTTP Request Status: ${reCode}")
